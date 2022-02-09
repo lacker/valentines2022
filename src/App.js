@@ -2,12 +2,17 @@ import React, { useEffect, useRef, useState } from "react";
 
 import useEventListener from "@use-it/event-listener";
 
-let LetterButton = ({ letter, key, padLeft }) => {
-  let className =
-    "h-20 w-20 m-1 px-5 border shadow-md border-black rounded-lg text-5xl focus:outline-none";
+let WRONG_PLACE = "text-white bg-yellow";
+let RIGHT_PLACE = "text-white bg-green";
+let ALL_WRONG = "text-white bg-grey";
+let PENDING = "";
+
+let LetterButton = ({ letter, key, padLeft, style }) => {
+  let className = "h-20 w-20 m-1 px-5 border border-black text-5xl";
   if (padLeft) {
     className += " ml-5";
   }
+  className += " " + style;
   return (
     <button className={className} key={key}>
       {letter}
@@ -15,7 +20,7 @@ let LetterButton = ({ letter, key, padLeft }) => {
   );
 };
 
-let Guess = ({ letters, solution }) => {
+let Guess = ({ letters, solution, submitted }) => {
   // Track what indexes mark the start of words, not counting the first one
   let starts = {};
   let accum = 0;
@@ -24,10 +29,48 @@ let Guess = ({ letters, solution }) => {
     starts[accum] = true;
   }
 
+  let flatSolution = [];
+  let letterCount = {};
+  for (let word of solution) {
+    for (let letter of word) {
+      flatSolution.push(letter);
+      letterCount[letter] = (letterCount[letter] || 0) + 1;
+    }
+  }
+
+  let paddedLetters = letters.concat();
+  while (paddedLetters.length < flatSolution.length) {
+    paddedLetters.push(" ");
+  }
+
+  let hasError = false;
+  let styles = [];
+  for (let i = 0; i < letters.length; i++) {
+    if (flatSolution[i] === letters[i]) {
+      styles.push(RIGHT_PLACE);
+      letterCount[letters[i]] -= 1;
+    } else {
+      styles.push(ALL_WRONG);
+      hasError = true;
+    }
+  }
+  for (let i = 0; i < letters.length; i++) {
+    if ((letterCount[letters[i]] || 0) > 0 && styles[i] == ALL_WRONG) {
+      console.log(letters[i], "has count", letterCount[letters[i]]);
+      styles[i] = WRONG_PLACE;
+      letterCount[letters[i]] -= 1;
+    }
+  }
+
   return (
     <div className="flex justify-center items-center py-2">
-      {letters.map((letter, index) =>
-        LetterButton({ letter, key: index, padLeft: starts[index] })
+      {paddedLetters.map((letter, index) =>
+        LetterButton({
+          letter,
+          key: index,
+          style: submitted ? styles[index] : PENDING,
+          padLeft: starts[index]
+        })
       )}
     </div>
   );
@@ -78,9 +121,14 @@ function App() {
           <div className="text-xl">ELDANNADLE</div>
         </div>
         {pastGuesses.map((g, index) => (
-          <Guess letters={g} solution={solution} key={index} />
+          <Guess letters={g} solution={solution} key={index} submitted={true} />
         ))}
-        <Guess letters={guess} solution={solution} key="current" />
+        <Guess
+          letters={guess}
+          solution={solution}
+          key="current"
+          submitted={false}
+        />
       </div>
     </div>
   );
