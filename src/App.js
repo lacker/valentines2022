@@ -2,10 +2,17 @@ import React, { useEffect, useRef, useState } from "react";
 
 import useEventListener from "@use-it/event-listener";
 
+import anagrams from "./anagrams";
+
 let WRONG_PLACE = "text-white bg-yellow";
 let RIGHT_PLACE = "text-white bg-green";
 let ALL_WRONG = "text-white bg-grey";
 let PENDING = "";
+
+function randomAnagram() {
+  let i = Math.floor(Math.random() * anagrams.length);
+  return anagrams[i];
+}
 
 let LetterButton = ({ letter, key, padLeft, style }) => {
   let className = "h-20 w-20 m-1 px-5 border border-black text-5xl";
@@ -84,7 +91,7 @@ function App() {
   let [pastGuesses, setPastGuesses] = useState([]);
 
   // A list of words
-  let [solution, setSolution] = useState(["TACO", "CAT"]);
+  let [solution, setSolution] = useState([]);
 
   let solutionLength = 0;
   for (let word of solution) {
@@ -111,6 +118,11 @@ function App() {
   }
 
   useEventListener("keydown", handler);
+
+  if (solution.length === 0) {
+    setSolution(randomAnagram());
+    return <div>loading...</div>;
+  }
 
   console.log("guess:", guess);
 

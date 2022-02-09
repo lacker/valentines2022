@@ -61,8 +61,8 @@ PRINTED = set()
 
 
 def report(words):
-    if len(words[0]) == len(words[-1]):
-        # Boring
+    if len(words) == 3 and len(words[1]) == 3:
+        # Too unfun to guess the middle word
         return
     s = "_".join(words)
     if s in PRINTED:
