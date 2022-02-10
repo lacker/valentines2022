@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import useEventListener from "@use-it/event-listener";
 
 import anagrams from "./anagrams";
+import allWords from "./all_words";
 
 let WRONG_PLACE = "text-white bg-yellow";
 let RIGHT_PLACE = "text-white bg-green";
@@ -12,6 +13,18 @@ let PENDING = "";
 function randomAnagram() {
   let i = Math.floor(Math.random() * anagrams.length);
   return anagrams[i];
+}
+
+function findInvalidWord(guess, solution) {
+  let rest = guess;
+  for (let solutionWord of solution) {
+    let guessLetters = rest.slice(0, solutionWord.length);
+    rest = rest.slice(solutionWord.length);
+    let word = guessLetters.join("");
+    if (!allWords[word]) {
+      return word;
+    }
+  }
 }
 
 let LetterButton = ({ letter, key, padLeft, style }) => {
@@ -27,7 +40,7 @@ let LetterButton = ({ letter, key, padLeft, style }) => {
   );
 };
 
-let Guess = ({ letters, solution, submitted }) => {
+let Guess = ({ letters, solution, styles, submitted }) => {
   // Track what indexes mark the start of words, not counting the first one
   let starts = {};
   let accum = 0;
@@ -36,37 +49,9 @@ let Guess = ({ letters, solution, submitted }) => {
     starts[accum] = true;
   }
 
-  let flatSolution = [];
-  let letterCount = {};
-  for (let word of solution) {
-    for (let letter of word) {
-      flatSolution.push(letter);
-      letterCount[letter] = (letterCount[letter] || 0) + 1;
-    }
-  }
-
   let paddedLetters = letters.concat();
-  while (paddedLetters.length < flatSolution.length) {
+  while (paddedLetters.length < accum) {
     paddedLetters.push(" ");
-  }
-
-  let hasError = false;
-  let styles = [];
-  for (let i = 0; i < letters.length; i++) {
-    if (flatSolution[i] === letters[i]) {
-      styles.push(RIGHT_PLACE);
-      letterCount[letters[i]] -= 1;
-    } else {
-      styles.push(ALL_WRONG);
-      hasError = true;
-    }
-  }
-  for (let i = 0; i < letters.length; i++) {
-    if ((letterCount[letters[i]] || 0) > 0 && styles[i] == ALL_WRONG) {
-      console.log(letters[i], "has count", letterCount[letters[i]]);
-      styles[i] = WRONG_PLACE;
-      letterCount[letters[i]] -= 1;
-    }
   }
 
   return (
@@ -83,6 +68,73 @@ let Guess = ({ letters, solution, submitted }) => {
   );
 };
 
+let Message = ({ message }) => {
+  if (!message) {
+    return null;
+  }
+  return (
+    <div className="flex justify-center items-center py-5">
+      <div className="text-xl">{message}</div>
+    </div>
+  );
+};
+
+function check(pastGuesses, guess, solution) {
+  let answer = {
+    pastStyles: [],
+    greenLetters: {},
+    yellowLetters: {},
+    greyLetters: {},
+    correct: false
+  };
+
+  let flatSolution = [];
+  for (let word of solution) {
+    for (let letter of word) {
+      flatSolution.push(letter);
+    }
+  }
+
+  for (let pastGuess of pastGuesses) {
+    let letterCount = {};
+    for (let letter of flatSolution) {
+      letterCount[letter] = (letterCount[letter] || 0) + 1;
+    }
+
+    let hasError = false;
+    let styles = [];
+    for (let i = 0; i < pastGuess.length; i++) {
+      let letter = pastGuess[i];
+      if (flatSolution[i] === letter) {
+        styles.push(RIGHT_PLACE);
+        letterCount[letter] -= 1;
+        answer.greenLetters[letter] = true;
+      } else {
+        styles.push(ALL_WRONG);
+        answer.greyLetters[letter] = true;
+        hasError = true;
+      }
+    }
+
+    if (!hasError) {
+      answer.correct = true;
+    }
+
+    for (let i = 0; i < pastGuess.length; i++) {
+      let letter = pastGuess[i];
+      if ((letterCount[letter] || 0) > 0 && styles[i] == ALL_WRONG) {
+        styles[i] = WRONG_PLACE;
+        answer.yellowLetters[letter] = true;
+        letterCount[letter] -= 1;
+      }
+    }
+
+    answer.pastStyles.push(styles);
+  }
+
+  return answer;
+}
+
 function App() {
   // Just a list of letters
   let [guess, setGuess] = useState([]);
@@ -93,12 +145,16 @@ function App() {
   // A list of words
   let [solution, setSolution] = useState([]);
 
+  let [errorMessage, setErrorMessage] = useState(null);
+
   let solutionLength = 0;
   for (let word of solution) {
     solutionLength += word.length;
   }
 
   let guessIsFull = guess.length >= solutionLength;
+
+  let checker = check(pastGuesses, guess, solution);
 
   function handler({ key }) {
     let s = String(key);
@@ -110,37 +166,66 @@ function App() {
       setGuess(guess.concat([s]));
     } else if (s === "Enter" && guessIsFull) {
       // They are making a guess
-      setPastGuesses(pastGuesses.concat([guess]));
-      setGuess([]);
+      let word = findInvalidWord(guess, solution);
+      if (!word) {
+        setPastGuesses(pastGuesses.concat([guess]));
+        setGuess([]);
+      } else {
+        setErrorMessage(word + " is not a word");
+      }
     } else if (s === "Backspace" && guess.length > 0) {
       setGuess(guess.slice(0, -1));
+      setErrorMessage(null);
     }
   }
 
   useEventListener("keydown", handler);
 
-  if (solution.length === 0) {
+  function newGame() {
+    console.log("new game");
+    setGuess([]);
+    setPastGuesses([]);
     setSolution(randomAnagram());
-    return <div>loading...</div>;
+    setErrorMessage(null);
   }
 
-  console.log("guess:", guess);
+  if (solution.length === 0) {
+    newGame();
+    return <div>loading...</div>;
+  }
 
   return (
     <div style={{ height: "90vh" }}>
       <div className="h-full flex flex-col justify-start items-center">
-        <div className="flex justify-center items-center py-5">
-          <div className="text-xl">ELDANNADLE</div>
-        </div>
+        <Message message="ELDANNADLE" />
         {pastGuesses.map((g, index) => (
-          <Guess letters={g} solution={solution} key={index} submitted={true} />
+          <Guess
+            letters={g}
+            solution={solution}
+            styles={checker.pastStyles[index]}
+            key={index}
+            submitted={true}
+          />
         ))}
-        <Guess
-          letters={guess}
-          solution={solution}
-          key="current"
-          submitted={false}
-        />
+        {checker.correct ? (
+          <>
+            <Message message="Correct!" />
+            <button
+              className="m-1 p-5 border shadow-md rounded-lg text-5xl"
+              onClick={newGame}
+            >
+              Play Again
+            </button>
+          </>
+        ) : (
+          <Guess
+            letters={guess}
+            solution={solution}
+            key="current"
+            submitted={false}
+          />
+        )}
+        <Message message={errorMessage} />
       </div>
     </div>
   );
