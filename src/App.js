@@ -27,7 +27,7 @@ function findInvalidWord(guess, solution) {
   }
 }
 
-let LetterButton = ({ letter, key, padLeft, style }) => {
+let LetterDisplay = ({ letter, key, padLeft, style }) => {
   let className = "h-20 w-20 m-1 px-5 border border-black text-5xl";
   if (padLeft) {
     className += " ml-5";
@@ -57,7 +57,7 @@ let Guess = ({ letters, solution, styles, submitted }) => {
   return (
     <div className="flex justify-center items-center py-2">
       {paddedLetters.map((letter, index) =>
-        LetterButton({
+        LetterDisplay({
           letter,
           key: index,
           style: submitted ? styles[index] : PENDING,
@@ -65,6 +65,17 @@ let Guess = ({ letters, solution, styles, submitted }) => {
         })
       )}
     </div>
+  );
+};
+
+let LetterButton = ({ letter, callback, style }) => {
+  let className =
+    "h-20 w-20 m-1 px-5 border shadow-md border-black rounded-lg text-5xl focus:outline-none " +
+    style;
+  return (
+    <button className={className} key={letter} onClick={() => callback(letter)}>
+      {letter}
+    </button>
   );
 };
 
@@ -135,6 +146,44 @@ function check(pastGuesses, guess, solution) {
   return answer;
 }
 
+function getStyle(checker, letter) {
+  if (checker.greenLetters[letter]) {
+    return RIGHT_PLACE;
+  }
+  if (checker.yellowLetters[letter]) {
+    return WRONG_PLACE;
+  }
+  if (checker.greyLetters[letter]) {
+    return ALL_WRONG;
+  }
+  return PENDING;
+}
+
+let Keyboard = ({ checker, callback }) => {
+  let makeLetter = letter => (
+    <LetterButton
+      letter={letter}
+      key={letter}
+      callback={callback}
+      style={getStyle(checker, letter)}
+    />
+  );
+
+  return (
+    <>
+      <div className="flex justify-center items-center py-2">
+        {Array.from("QWERTYUIOP").map(makeLetter)}
+      </div>
+      <div className="flex justify-center items-center py-2">
+        {Array.from("ASDFGHJKL").map(makeLetter)}
+      </div>
+      <div className="flex justify-center items-center py-2">
+        {Array.from("ZXCVBNM").map(makeLetter)}
+      </div>
+    </>
+  );
+};
+
 function App() {
   // Just a list of letters
   let [guess, setGuess] = useState([]);
@@ -164,19 +213,25 @@ function App() {
       console.log("adding a letter to the guess");
       s = s.toUpperCase();
       setGuess(guess.concat([s]));
-    } else if (s === "Enter" && guessIsFull) {
-      // They are making a guess
-      let word = findInvalidWord(guess, solution);
-      if (!word) {
-        setPastGuesses(pastGuesses.concat([guess]));
-        setGuess([]);
-      } else {
-        setErrorMessage(word + " is not a word");
+    } else if (s === "Enter") {
+      if (checker.correct) {
+        newGame();
+      } else if (guessIsFull) {
+        // They are making a guess
+        let word = findInvalidWord(guess, solution);
+        if (!word) {
+          setPastGuesses(pastGuesses.concat([guess]));
+          setGuess([]);
+        } else {
+          setErrorMessage(word + " is not a word");
+        }
       }
     } else if (s === "Backspace" && guess.length > 0) {
       setGuess(guess.slice(0, -1));
       setErrorMessage(null);
     }
+
+    document.activeElement.blur();
   }
 
   useEventListener("keydown", handler);
@@ -194,8 +249,12 @@ function App() {
     return <div>loading...</div>;
   }
 
+  let callback = checker.correct
+    ? () => {}
+    : letter => handler({ key: letter });
+
   return (
-    <div style={{ height: "90vh" }}>
+    <div style={{ height: "50vh" }}>
       <div className="h-full flex flex-col justify-start items-center">
         <Message message="ELDANNADLE" />
         {pastGuesses.map((g, index) => (
@@ -226,6 +285,9 @@ function App() {
           />
         )}
         <Message message={errorMessage} />
+      </div>
+      <div className="h-full flex flex-col justify-end items-center">
+        <Keyboard checker={checker} callback={callback} />
       </div>
     </div>
   );
