@@ -7,10 +7,10 @@ import allWords from "./all_words";
 
 import backspace from "./backspace.png";
 
-let WRONG_PLACE = "text-white bg-yellow";
-let RIGHT_PLACE = "text-white bg-green";
-let ALL_WRONG = "text-white bg-grey";
-let PENDING = "";
+let WRONG_PLACE = "text-white bg-yellow border-yellow";
+let RIGHT_PLACE = "text-white bg-green border-green";
+let ALL_WRONG = "text-white bg-grey border-grey";
+let PENDING = "bg-offwhite border-offwhite";
 
 function randomAnagram() {
   let i = Math.floor(Math.random() * anagrams.length);
@@ -30,9 +30,9 @@ function findInvalidWord(guess, solution) {
 }
 
 let LetterDisplay = ({ letter, key, padLeft, style }) => {
-  let className = "h-20 w-20 m-1 px-5 border border-black text-5xl";
+  let className = "h-10 w-6 ml-1 border text-xl";
   if (padLeft) {
-    className += " ml-5";
+    className += " ml-3";
   }
   className += " " + style;
   return (
@@ -70,10 +70,13 @@ let Guess = ({ letters, solution, styles, submitted }) => {
   );
 };
 
+// Button styles
+let normal = "h-14 w-8 border mr-1 text-xl focus:outline-none";
+let special = "h-14 w-12 px-4 border mr-1 text-xl focus:outline-none";
+
 let LetterButton = ({ letter, callback, style }) => {
-  let className =
-    "h-20 w-20 m-1 px-5 border shadow-md border-black rounded-lg text-5xl focus:outline-none " +
-    style;
+  let className = letter.match(/^[A-Z]$/) ? normal : special;
+  className += " " + style;
   return (
     <button className={className} key={letter} onClick={() => callback(letter)}>
       {letter}
@@ -83,11 +86,7 @@ let LetterButton = ({ letter, callback, style }) => {
 
 let ImageButton = ({ alt, image, onClick }) => {
   return (
-    <button
-      className="h-20 w-20 m-1 px-5 border shadow-md border-black rounded-lg text-5xl focus:outline-none"
-      key={alt}
-      onClick={onClick}
-    >
+    <button className={special + " " + PENDING} key={alt} onClick={onClick}>
       <img src={image} alt={alt} />
     </button>
   );
@@ -98,8 +97,8 @@ let Message = ({ message }) => {
     return null;
   }
   return (
-    <div className="flex justify-center items-center py-5">
-      <div className="text-xl">{message}</div>
+    <div className="flex justify-center items-center py-3">
+      <div className="text-lg">{message}</div>
     </div>
   );
 };
@@ -185,16 +184,17 @@ let Keyboard = ({ checker, callback }) => {
 
   return (
     <>
-      <div className="flex justify-center items-center py-2">
+      <div className="flex justify-center items-center mb-1">
         {Array.from("QWERTYUIOP").map(makeLetter)}
       </div>
-      <div className="flex justify-center items-center py-2">
+      <div className="flex justify-center items-center mb-1">
         {Array.from("ASDFGHJKL").map(makeLetter)}
       </div>
-      <div className="flex justify-center items-center py-2">
+      <div className="flex justify-center items-center mb-3">
         <LetterButton
           letter="✓"
           key="Enter"
+          style={PENDING}
           callback={() => callback("Enter")}
         />
         {Array.from("ZXCVBNM").map(makeLetter)}
@@ -279,40 +279,41 @@ function App() {
     : letter => handler({ key: letter });
 
   return (
-    <div style={{ height: "50vh" }}>
-      <div className="h-full flex flex-col justify-start items-center">
-        <Message message="ELDANNADLE" />
-        {pastGuesses.map((g, index) => (
-          <Guess
-            letters={g}
-            solution={solution}
-            styles={checker.pastStyles[index]}
-            key={index}
-            submitted={true}
-          />
-        ))}
-        {checker.correct ? (
-          <>
-            <Message message="Correct!" />
-            <button
-              className="m-1 p-5 border shadow-md rounded-lg text-5xl"
-              onClick={newGame}
-            >
-              Play Again
-            </button>
-          </>
-        ) : (
-          <Guess
-            letters={guess}
-            solution={solution}
-            key="current"
-            submitted={false}
-          />
-        )}
-        <Message message={errorMessage} />
-      </div>
-      <div className="h-full flex flex-col justify-end items-center">
-        <Keyboard checker={checker} callback={callback} />
+    <div className="absolute inset-0">
+      <div className="h-full flex flex-col justify-between">
+        <div className="flex flex-col items-center">
+          <Message message="ELDANNADLE" />
+          {pastGuesses.map(
+            (g, index) =>
+              pastGuesses.length - index <= 5 && (
+                <Guess
+                  letters={g}
+                  solution={solution}
+                  styles={checker.pastStyles[index]}
+                  key={index}
+                  submitted={true}
+                />
+              )
+          )}
+          {checker.correct ? (
+            <>
+              <button className="m-1 p-2 border text-lg" onClick={newGame}>
+                Nice! Play Again
+              </button>
+            </>
+          ) : (
+            <Guess
+              letters={guess}
+              solution={solution}
+              key="current"
+              submitted={false}
+            />
+          )}
+          <Message message={errorMessage} />
+        </div>
+        <div className="flex flex-col justify-end items-center">
+          <Keyboard checker={checker} callback={callback} />
+        </div>
       </div>
     </div>
   );

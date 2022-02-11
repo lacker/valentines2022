@@ -7,7 +7,9 @@ module.exports = {
       yellow: "#c9b458",
       green: "#6aaa64",
       grey: "#787c7e",
-      white: "#ffffff"
+      white: "#ffffff",
+      offwhite: "#dddddd",
+      black: "#000000"
     }
   },
   variants: {
