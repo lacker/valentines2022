@@ -5,6 +5,8 @@ import useEventListener from "@use-it/event-listener";
 import anagrams from "./anagrams";
 import allWords from "./all_words";
 
+import backspace from "./backspace.png";
+
 let WRONG_PLACE = "text-white bg-yellow";
 let RIGHT_PLACE = "text-white bg-green";
 let ALL_WRONG = "text-white bg-grey";
@@ -75,6 +77,18 @@ let LetterButton = ({ letter, callback, style }) => {
   return (
     <button className={className} key={letter} onClick={() => callback(letter)}>
       {letter}
+    </button>
+  );
+};
+
+let ImageButton = ({ alt, image, onClick }) => {
+  return (
+    <button
+      className="h-20 w-20 m-1 px-5 border shadow-md border-black rounded-lg text-5xl focus:outline-none"
+      key={alt}
+      onClick={onClick}
+    >
+      <img src={image} alt={alt} />
     </button>
   );
 };
@@ -178,7 +192,18 @@ let Keyboard = ({ checker, callback }) => {
         {Array.from("ASDFGHJKL").map(makeLetter)}
       </div>
       <div className="flex justify-center items-center py-2">
+        <LetterButton
+          letter="✓"
+          key="Enter"
+          callback={() => callback("Enter")}
+        />
         {Array.from("ZXCVBNM").map(makeLetter)}
+
+        <ImageButton
+          alt="backspace"
+          image={backspace}
+          onClick={() => callback("Backspace")}
+        />
       </div>
     </>
   );
